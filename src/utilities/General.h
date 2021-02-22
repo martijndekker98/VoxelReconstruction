@@ -45,7 +45,7 @@ public:
 	static const std::string ConfigFile;
 	static const std::string BackgroundVideoFile;
 
-	static bool fexists(const std::string &);
+	static bool fexists(const std::string&);
 };
 
 } /* namespace nl_uu_science_gmt */
