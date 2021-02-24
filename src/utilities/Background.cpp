@@ -22,7 +22,9 @@ namespace nl_uu_science_gmt
     void Background::findOrCreateBackground() {
         cout << "Searching for background.png files" << endl;
 
+        // relative path doesnt work right now.
         std::string path = "D:\\Master\\1e jaar\\Computer Vision\\Repos\\VoxelReconstruction\\data";
+        // for each camera directory:
         for (const auto& dir : fs::directory_iterator(path)) {
 
             string data_path = dir.path().string() + "\\";
@@ -60,7 +62,7 @@ namespace nl_uu_science_gmt
                     }
 
                     // Determine the median frame from all frames
-                    Mat mFrame = Background::compute_median(frames);
+                    Mat mFrame = compute_median(frames);
 
                     // Display median frame and write to file
                     imshow("median frame", mFrame);
@@ -84,7 +86,7 @@ namespace nl_uu_science_gmt
         return elements[elements.size() / 2];
     }
 
-    cv::Mat Background::compute_median(std::vector<cv::Mat> vec)
+    cv::Mat Background::compute_median(vector<Mat> vec)
     {
         cv::Mat medianImg(vec[0].rows, vec[0].cols, CV_8UC3, cv::Scalar(0, 0, 0));
 
@@ -92,9 +94,9 @@ namespace nl_uu_science_gmt
         {
             for (int col = 0; col < vec[0].cols; col++)
             {
-                std::vector<int> elements_B;
-                std::vector<int> elements_G;
-                std::vector<int> elements_R;
+                vector<int> elements_B;
+                vector<int> elements_G;
+                vector<int> elements_R;
 
                 for (int imgNumber = 0; imgNumber < vec.size(); imgNumber++)
                 {
@@ -107,9 +109,9 @@ namespace nl_uu_science_gmt
                     elements_R.push_back(R);
                 }
 
-                medianImg.at<cv::Vec3b>(row, col)[0] = computeMedian(elements_B);
-                medianImg.at<cv::Vec3b>(row, col)[1] = computeMedian(elements_G);
-                medianImg.at<cv::Vec3b>(row, col)[2] = computeMedian(elements_R);
+                medianImg.at<Vec3b>(row, col)[0] = computeMedian(elements_B);
+                medianImg.at<Vec3b>(row, col)[1] = computeMedian(elements_G);
+                medianImg.at<Vec3b>(row, col)[2] = computeMedian(elements_R);
             }
         }
         return medianImg;

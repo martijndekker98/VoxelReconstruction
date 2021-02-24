@@ -7,6 +7,7 @@
 #include "utilities/General.h"
 #include "VoxelReconstruction.h"
 #include "utilities/Background.h"
+#include "utilities/Calibrate.h"
 
 using namespace std;
 using namespace nl_uu_science_gmt;
@@ -17,6 +18,8 @@ int main(
 {
 	// init background stuff
     Background::findOrCreateBackground();
+
+	Calibrate::calibrate();
 
 	VoxelReconstruction::showKeys();
 	VoxelReconstruction vr("data" + std::string(PATH_SEP), 4);
