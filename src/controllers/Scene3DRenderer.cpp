@@ -145,8 +145,14 @@ void Scene3DRenderer::processForeground(
 	threshold(tmp, background, m_v_threshold, 255, CV_THRESH_BINARY);
 	bitwise_or(foreground, background, foreground);
 
-	// Improve the foreground image
+	// erodation and dilation
+	erode(foreground, foreground, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
+	dilate(foreground, foreground, getStructuringElement(MORPH_ELLIPSE, Size(2, 2)));
 
+	erode(foreground, foreground, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+	dilate(foreground, foreground, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+
+	// Improve the foreground image
 	camera->setForegroundImage(foreground);
 }
 
