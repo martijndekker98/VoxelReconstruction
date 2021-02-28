@@ -23,7 +23,7 @@ namespace nl_uu_science_gmt
         cout << "Searching for background.png files" << endl;
 
         // relative path doesnt work right now.
-        std::string path = "D:\\Master\\1e jaar\\Computer Vision\\Repos\\VoxelReconstruction\\data";
+        std::string path = "J:\\VoxelReconstruction\\data";
         // for each camera directory:
         for (const auto& dir : fs::directory_iterator(path)) {
 

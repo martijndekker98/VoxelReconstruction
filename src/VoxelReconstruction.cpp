@@ -33,6 +33,7 @@ VoxelReconstruction::VoxelReconstruction(const string &dp, const int cva) :
 		m_data_path(dp), m_cam_views_amount(cva)
 {
 	const string cam_path = m_data_path + "cam";
+	cout << "Camera path: " << cam_path << endl;
 
 	for (int v = 0; v < m_cam_views_amount; ++v)
 	{

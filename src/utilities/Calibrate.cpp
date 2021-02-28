@@ -216,13 +216,49 @@ void Calibrate::saveCameraParams(const string& filename,
     }
 }
 
+void Calibrate::writeXML(string filename, Mat intr, Mat coeffs) {
+    FileStorage fs(filename, FileStorage::WRITE);
+    fs << "CameraMatrix" << intr;
+    fs << "DistortionCoeffs" << coeffs;
+    fs.release();
+}
+
+bool Calibrate::checkIntrinsics(string fileName) {
+    FileStorage fs(fileName, FileStorage::READ);
+    FileNode fn1 = fs["CameraMatrix"];
+    FileNode fn2 = fs["DistortionCoeffs"];
+    Mat camMat, coeffs;
+    fn1 >> camMat;
+    fn2 >> coeffs;
+    if (camMat.at<double>(0, 0) == 0 || camMat.at<double>(0, 2) == 0 || camMat.at<double>(1, 1) == 0 ||
+        (coeffs.at<double>(0, 0) == 0 && coeffs.at<double>(2, 0) == 0 && coeffs.at<double>(3, 0) == 0)) {
+        //cout << "Camera matrix: " << camMat << endl;
+        //cout << "Distortion coeffs: " << coeffs << endl;
+        /*if (camMat.at<double>(0, 0) == 0)
+            cout << "(0, 0) == 0 >> " << camMat.at<double>(0, 0) << endl;
+        else if (camMat.at<double>(0, 2) == 0)
+                cout << "(0, 2) == 0 >> " << camMat.at<double>(0, 2) << endl;
+        else if (camMat.at<double>(1, 1) == 0)
+            cout << "(1, 1) == 0 >> " << camMat.at<double>(1, 1) << endl;
+        else if (coeffs.at<double>(0,0) == 0)
+            cout << "coeffs (0,0) == 0 >> " << coeffs.at<double>(0,0) << endl;
+        else if (coeffs.at<double>(2, 0) == 0)
+            cout << "coeffs (2,0) == 0 >> " << coeffs.at<double>(2, 0) << endl;
+        else if (coeffs.at<double>(4, 0) == 0)
+            cout << "coeffs (4,0) == 0 >> " << coeffs.at<double>(4, 0) << endl;*/
+        return false;
+    }
+    else
+        return true;
+}
+
 // call the runCalibration and saveCameraParams functions.
 bool Calibrate::runAndSave(const string& outputFilename,
     const vector<vector<Point2f> >& imagePoints,
     Size imageSize, Size boardSize, Pattern patternType, float squareSize,
     float grid_width, bool release_object,
     float aspectRatio, int flags, Mat& camMat,
-    Mat& distMat, bool writeExtrinsics, bool writePoints, bool writeGrid)
+    Mat& distMat, bool writeExtrinsics, bool writePoints, bool writeGrid, string folderName, string fileName)
 {
     vector<Mat> rvecs, tvecs;
     vector<float> reprojErrs;
@@ -238,8 +274,10 @@ bool Calibrate::runAndSave(const string& outputFilename,
 
     if (ok)
     {
-        cout << "done" << endl;
-        Calibrate::saveCameraParams(outputFilename, imageSize,
+        string path = current_path().parent_path().parent_path().string() + "\\data\\" + folderName + "\\" + fileName;
+        cout << "Done, wrote (CamMatrix & dist. coeffs) in file: " << path << endl; 
+        Calibrate::writeXML(path, camMat, distMat);
+        /*Calibrate::saveCameraParams(outputFilename, imageSize,
             boardSize, squareSize, aspectRatio,
             flags, camMat, distMat,
             writeExtrinsics ? rvecs : vector<Mat>(),
@@ -247,136 +285,135 @@ bool Calibrate::runAndSave(const string& outputFilename,
             writeExtrinsics ? reprojErrs : vector<float>(),
             writePoints ? imagePoints : vector<vector<Point2f> >(),
             writeGrid ? newObjPoints : vector<Point3f>(),
-            totalAvgErr);
+            totalAvgErr);*/
     }
     return ok;
 }
 
 int Calibrate::calibrate() {
-    Size boardSize, imageSize;
-    float squareSize, aspectRatio = 1;
-    Mat camMat, distMat;
-    string outputFilename = "out_camera_data.yml";
-    string inputFilename = "";
+    string outputName = "intrinsics.xml";
+    for (int x = 1; x < 5; x++) {
+        string folderName = "cam" + to_string(x);
+        string path = current_path().parent_path().parent_path().string() + "\\data\\";
+        string newPath = path + folderName + "\\intrinsics.avi";
 
-    int i;
-    int nframes = 30;
-    bool writeExtrinsics = false, writePoints = true, writeGrid = true;
-    //
-    //
-    // write extrinsics was true
-    //
-    //
-    bool undistortImage = false;
-    int flags = 0;
-    //VideoCapture capture;
-    int delay = 1000;
-    clock_t prevTimestamp = 0;
-    int mode = CAPTURING;
-    int cameraId = 0;
-    vector<vector<Point2f> > imagePoints;
-    Pattern pattern = CHESSBOARD;
-    bool calibrated = false;
-    int winSize;
+        if (exists(path + folderName + "\\" + outputName) && checkIntrinsics(path + folderName + "\\" + outputName)) {
+            cout << "The file intrinsics.xml already exists in " << (string)(path + folderName) << endl;
+        }
+        else {
+            Size boardSize, imageSize;
+            float squareSize, aspectRatio = 1;
+            Mat camMat, distMat;
+            string inputFilename = "";
+
+            int i;
+            int nframes = 50;
+            bool writeExtrinsics = false, writePoints = true, writeGrid = true;
+            //
+            // write extrinsics was true
+            //
+            bool undistortImage = false;
+            int flags = 0;
+            //VideoCapture capture;
+            int delay = 1000;
+            clock_t prevTimestamp = 0;
+            int mode = CAPTURING;
+            int cameraId = 0;
+            Pattern pattern = CHESSBOARD;
+            bool calibrated = false;
+            int winSize;
 
  
-    boardSize.width = 8;
-    boardSize.height = 6;
-    squareSize = 115;
-    winSize = 11;
-    float grid_width = squareSize * (boardSize.width - 1);
-    bool release_object = false;
+            boardSize.width = 8;
+            boardSize.height = 6;
+            squareSize = 115;
+            winSize = 11;
+            float grid_width = squareSize * (boardSize.width - 1);
+            bool release_object = false;
 
-    string path = "D:\\Master\\1e jaar\\Computer Vision\\Repos\\VoxelReconstruction";
-    string newPath = path + "\\data\\cam4\\intrinsics.avi";
-    VideoCapture capture(newPath);
+            vector<vector<Point2f> > imagePoints;
+
+            VideoCapture capture(newPath);
 
 
-    if (!capture.isOpened())
-        throw "Error when reading file";
+            if (!capture.isOpened())
+                throw "Error when reading file";
 
-    if (squareSize <= 0)
-        return fprintf(stderr, "Invalid board square width\n"), -1;
-    if (nframes <= 3)
-        return printf("Invalid number of images\n"), -1;
-    if (aspectRatio <= 0)
-        return printf("Invalid aspect ratio\n"), -1;
-    if (delay <= 0)
-        return printf("Invalid delay\n"), -1;
-    if (boardSize.width <= 0)
-        return fprintf(stderr, "Invalid board width\n"), -1;
-    if (boardSize.height <= 0)
-        return fprintf(stderr, "Invalid board height\n"), -1;
+            if (squareSize <= 0)
+                return fprintf(stderr, "Invalid board square width\n"), -1;
+            if (nframes <= 3)
+                return printf("Invalid number of images\n"), -1;
+            if (aspectRatio <= 0)
+                return printf("Invalid aspect ratio\n"), -1;
+            if (delay <= 0)
+                return printf("Invalid delay\n"), -1;
+            if (boardSize.width <= 0)
+                return fprintf(stderr, "Invalid board width\n"), -1;
+            if (boardSize.height <= 0)
+                return fprintf(stderr, "Invalid board height\n"), -1;
 
-    namedWindow("w", 1);
-    for (i = 0; ; i++) {
-        Mat view, viewGray;
-        imageSize = view.size();
+            namedWindow("w", 1);
+            for (i = 0; ; i++) {
+                Mat view, viewGray;
+                imageSize = view.size();
 
-        capture >> view;
-        if (view.empty())
-            break;
+                capture >> view;
+                if (view.empty())
+                    break;
 
-        if (i % 50 == 0) {
-            imageSize = view.size();
-            vector<Point2f> pointbuf;
-            cvtColor(view, viewGray, COLOR_BGR2GRAY);
+                if (i % 20 == 0) {
+                    imageSize = view.size();
+                    vector<Point2f> pointbuf;
+                    cvtColor(view, viewGray, COLOR_BGR2GRAY);
 
-            bool found;
-            Mat temp = view.clone();
-            //determine if patterin in view
-            switch (pattern)
-            {
-            case CHESSBOARD:
-                found = findChessboardCorners(view, boardSize, pointbuf,
-                    CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FAST_CHECK | CALIB_CB_NORMALIZE_IMAGE);
-                break;
-            case CIRCLES_GRID:
-                found = findCirclesGrid(view, boardSize, pointbuf);
-                break;
-            case ASYMMETRIC_CIRCLES_GRID:
-                found = findCirclesGrid(view, boardSize, pointbuf, CALIB_CB_ASYMMETRIC_GRID);
-                break;
-            default:
-                return fprintf(stderr, "Unknown pattern type\n"), -1;
+                    bool found;
+                    Mat temp = view.clone();
+                    //determine if patterin in view
+                    switch (pattern)
+                    {
+                    case CHESSBOARD:
+                        found = findChessboardCorners(view, boardSize, pointbuf,
+                            CALIB_CB_ADAPTIVE_THRESH | CALIB_CB_FAST_CHECK | CALIB_CB_NORMALIZE_IMAGE);
+                        break;
+                    case CIRCLES_GRID:
+                        found = findCirclesGrid(view, boardSize, pointbuf);
+                        break;
+                    case ASYMMETRIC_CIRCLES_GRID:
+                        found = findCirclesGrid(view, boardSize, pointbuf, CALIB_CB_ASYMMETRIC_GRID);
+                        break;
+                    default:
+                        return fprintf(stderr, "Unknown pattern type\n"), -1;
+                    }
+
+                    // if a chessboard is found, we attempt to increase the accuracy of determining the corners
+                    if (pattern == CHESSBOARD && found) {
+                        cornerSubPix(viewGray, pointbuf, Size(11, 11),
+                            Size(-1, -1), TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30, 0.0001));
+                    }
+                    if (mode == CAPTURING && found)
+                    {
+                        cout << "Push pointbuf" << endl;
+                        imagePoints.push_back(pointbuf);
+                        prevTimestamp = clock();
+                    }
+                    // draw corners if the chessboard is in view and undistort is off (we dont want overlapping animations)
+                    if (found && undistortImage == false)
+                        drawChessboardCorners(view, boardSize, Mat(pointbuf), found);
+
+                    if (mode == CAPTURING && imagePoints.size() >= (unsigned)nframes) {
+                        Calibrate::runAndSave("outPutFileName", imagePoints, imageSize, boardSize, pattern, squareSize, grid_width, release_object, aspectRatio, flags, camMat, distMat,
+                            writeExtrinsics, writePoints, writeGrid, folderName, outputName);
+                        cout << "runAndSave!" << endl;
+                        mode = DETECTION;
+                    }
+                    imshow("w", view);
+
+                    char key = waitKey(2);
+                    if (key == 'q')
+                        break;
+                }
             }
-            //if (found)
-            //    cout << "Found!" << endl;
-
-            // if a chessboard is found, we attempt to increase the accuracy of determining the corners
-            if (pattern == CHESSBOARD && found) {
-                cornerSubPix(viewGray, pointbuf, Size(11, 11),
-                    Size(-1, -1), TermCriteria(TermCriteria::EPS + TermCriteria::COUNT, 30, 0.0001));
-            }
-            if (mode == CAPTURING && found)//&&
-              //(!capture.isOpened() || clock() - prevTimestamp > delay*1e-3*CLOCKS_PER_SEC) )
-            {
-                cout << "Push pointbuf" << endl;
-                imagePoints.push_back(pointbuf);
-                prevTimestamp = clock();
-            }
-            // draw corners if the chessboard is in view and undistort is off (we dont want overlapping animations)
-            if (found && undistortImage == false)
-                drawChessboardCorners(view, boardSize, Mat(pointbuf), found);
-
-
-
-            if (mode == CAPTURING && imagePoints.size() >= (unsigned)nframes) {
-                Calibrate::runAndSave(outputFilename, imagePoints, imageSize, boardSize, pattern, squareSize, grid_width, release_object, aspectRatio, flags, camMat, distMat,
-                    writeExtrinsics, writePoints, writeGrid);
-                cout << "runAndSave!" << endl;
-                mode = DETECTION;
-            }
-            imshow("w", view);
-
-            //cout << "Size: " << imagePoints.size() << endl;
-            
-            char key = waitKey(2);
-            if (key == 'q')
-                break;
-
-            }
+            cout << "frames: " << to_string(i) << endl;
         }
-        cout << "frames: " << to_string(i) << endl;
-        
+    }
 }

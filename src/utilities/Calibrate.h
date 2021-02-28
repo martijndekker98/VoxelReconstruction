@@ -13,6 +13,8 @@ public:
         const Mat& camMat, const Mat& distMat,
         vector<float>& perViewErrors);
     static void Calibrate::calcChessboardCorners(Size boardSize, float squareSize, vector<Point3f>& corners, Pattern patternType);
+    static void Calibrate::writeXML(string filename, Mat intr, Mat coeffs);
+    static bool Calibrate::checkIntrinsics(string fileName);
     static bool Calibrate::runCalibration(vector<vector<Point2f> > imagePoints,
         Size imageSize, 
         Size boardSize, 
@@ -37,7 +39,7 @@ public:
         Size imageSize, Size boardSize, Pattern patternType, float squareSize,
         float grid_width, bool release_object,
         float aspectRatio, int flags, Mat& camMat,
-        Mat& distMat, bool writeExtrinsics, bool writePoints, bool writeGrid);
+        Mat& distMat, bool writeExtrinsics, bool writePoints, bool writeGrid, string folderName, string fileName);
     static int Calibrate::calibrate();
     
 
